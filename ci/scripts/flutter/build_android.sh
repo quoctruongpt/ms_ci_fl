@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 
 # Script build ứng dụng Flutter cho Android
 # ========================================
@@ -17,31 +17,6 @@ fi
 # Đường dẫn đến dự án Flutter
 FLUTTER_PROJECT_DIR="${ROOT_DIR}/src/flutter_project"
 ARTIFACTS_DIR="${ROOT_DIR}/artifacts/android"
-
-# Hàm kiểm tra môi trường Flutter
-check_flutter_env() {
-  # Kiểm tra Flutter có được cài đặt không
-  if ! command -v flutter &> /dev/null; then
-    echo -e "${RED}[LỖI] Không tìm thấy Flutter. Vui lòng cài đặt Flutter trước khi tiếp tục.${NC}"
-    return 1
-  fi
-
-  # Kiểm tra Android SDK
-  if [[ -z "$ANDROID_SDK_ROOT" ]]; then
-    echo -e "${YELLOW}[CẢNH BÁO] Biến môi trường ANDROID_SDK_ROOT chưa được thiết lập.${NC}"
-    # Thử tìm Android SDK từ Flutter config
-    local sdk_location=$(flutter config --machine | grep "androidSdkPath" | sed 's/.*"androidSdkPath":"\([^"]*\)".*/\1/')
-    if [[ ! -z "$sdk_location" && -d "$sdk_location" ]]; then
-      export ANDROID_SDK_ROOT="$sdk_location"
-      echo -e "${GREEN}Đã tìm thấy Android SDK tại: $ANDROID_SDK_ROOT${NC}"
-    else
-      echo -e "${RED}[LỖI] Không thể xác định vị trí của Android SDK. Hãy thiết lập ANDROID_SDK_ROOT.${NC}"
-      return 1
-    fi
-  fi
-
-  return 0
-}
 
 # Hàm clean dự án Flutter
 clean_flutter_project() {
@@ -117,16 +92,16 @@ build_aab() {
 
 # Hàm build test
 build_test() {
-  echo -e "${YELLOW}Thực hiện build test (debug APK)...${NC}"
+  echo -e "${YELLOW}Thực hiện build test (APK release)...${NC}"
   
   # Clean dự án
   clean_flutter_project || return 1
   
-  # Build debug APK
-  build_apk "debug" || return 1
+  # Build release APK
+  build_apk "release" || return 1
   
   echo -e "${GREEN}[OK] Build test thành công.${NC}"
-  echo -e "${GREEN}[OK] APK được lưu tại: ${ARTIFACTS_DIR}/app-debug.apk${NC}"
+  echo -e "${GREEN}[OK] APK được lưu tại: ${ARTIFACTS_DIR}/app-release.apk${NC}"
   
   return 0
 }
@@ -154,9 +129,6 @@ build_release() {
 # Hàm chính
 main() {
   local build_type="$1"
-  
-  # Kiểm tra môi trường
-  check_flutter_env || return 1
   
   # Kiểm tra xem dự án Flutter có tồn tại không
   if [[ ! -d "$FLUTTER_PROJECT_DIR" ]]; then
