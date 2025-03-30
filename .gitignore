@@ -1,0 +1,102 @@
+# Thư mục và file hệ thống
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+.local/
+
+# Loại bỏ các thư mục dự án nhưng giữ lại cấu trúc
+# Các thư mục mã nguồn
+/src/*
+!/src/.gitkeep
+
+# Dự án đã có quản lý riêng tại repo khác
+/src/flutter_project/
+/src/unity_project/
+
+# Các thư mục sản phẩm và logs
+/artifacts/*
+!/artifacts/.gitkeep
+/logs/*
+!/logs/.gitkeep
+!/ci/.gitkeep
+/tools/*
+!/tools/.gitkeep
+
+# Các thư mục và file tạm thời
+/tmp/
+/Temp/
+
+# Thư mục build Flutter
+**/build/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/flutter_export_environment.sh
+**/.packages
+**/pubspec.lock
+
+# Thư mục và file Unity
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+/[Aa]ssets/AssetStoreTools*
+
+# Unity meta
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# Unity3D generated file on crash reports
+sysinfo.txt
+
+# Unity3D generated content
+*.unityproj
+*.booproj
+*.svd
+*.pdb
+*.opendb
+*.VC.db
+
+# Visual Studio cache directory
+.vs/
+
+# Gradle files
+.gradle/
+local.properties
+
+# Android Studio/IntelliJ files
+*.iml
+.idea/
+/captures/
+
+# Xcode
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata/
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa
+*.xcuserstate
+.DS_Store
+*.dSYM.zip
+*.dSYM
+
+# CocoaPods
+/ios/Pods/
