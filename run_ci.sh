@@ -12,12 +12,40 @@ GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m' # No Color
 
+# Source cấu hình Telegram
+if [ -f "$ROOT_DIR/ci/config/telegram_config.sh" ]; then
+    source "$ROOT_DIR/ci/config/telegram_config.sh"
+    
+    # Kiểm tra cấu hình Telegram
+    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+        echo -e "${RED}[LỖI] Thiếu cấu hình Telegram. Vui lòng kiểm tra file ci/config/telegram_config.sh${NC}"
+        exit 1
+    fi
+else
+    echo -e "${RED}[LỖI] Không tìm thấy file cấu hình Telegram: ci/config/telegram_config.sh${NC}"
+    exit 1
+fi
+
+# Source script thông báo Telegram
+if [ -f "$ROOT_DIR/ci/scripts/telegram/notify.sh" ]; then
+    source "$ROOT_DIR/ci/scripts/telegram/notify.sh"
+else
+    echo -e "${RED}[LỖI] Không tìm thấy file script thông báo Telegram: ci/scripts/telegram/notify.sh${NC}"
+    exit 1
+fi
+
 # Mặc định là xây dựng cho Android và nhánh main cho cả Flutter và Unity
 PLATFORM="android"
 UNITY_VERSION="2022.3.57f1"
 FLUTTER_BRANCH="main"
 UNITY_BRANCH="main"
 BUILD_TYPE="test"  # Mặc định là build test
+
+# Lấy commit hash và message của Flutter và Unity
+FLUTTER_COMMIT=$(cd "$ROOT_DIR/src/flutter_project" && git rev-parse --short HEAD)
+FLUTTER_COMMIT_MSG=$(cd "$ROOT_DIR/src/flutter_project" && git log -1 --pretty=%B)
+UNITY_COMMIT=$(cd "$ROOT_DIR/src/unity_project" && git rev-parse --short HEAD)
+UNITY_COMMIT_MSG=$(cd "$ROOT_DIR/src/unity_project" && git log -1 --pretty=%B)
 
 # Xử lý tham số
 show_help() {
@@ -81,6 +109,9 @@ if [[ ! "$BUILD_TYPE" =~ ^(test|release)$ ]]; then
   exit 1
 fi
 
+# Gửi thông báo bắt đầu build
+send_telegram_start "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$FLUTTER_COMMIT_MSG" "$UNITY_BRANCH" "$UNITY_COMMIT" "$UNITY_COMMIT_MSG"
+
 echo -e "${YELLOW}Bắt đầu quá trình CI cho platform: $PLATFORM${NC}"
 echo -e "${YELLOW}Flutter branch: $FLUTTER_BRANCH${NC}"
 echo -e "${YELLOW}Unity branch: $UNITY_BRANCH${NC}"
@@ -92,6 +123,7 @@ export ROOT_DIR
 "$ROOT_DIR/ci/scripts/git/checkout_branch.sh" "$FLUTTER_BRANCH" "$UNITY_BRANCH"
 if [[ $? -ne 0 ]]; then
   echo -e "${RED}[LỖI] Không thể chuyển đổi git branch. Hãy kiểm tra log để biết chi tiết.${NC}"
+  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Git Checkout Failed" "Không thể chuyển đổi git branch"
   exit 1
 fi
 
@@ -104,6 +136,7 @@ if [[ $? -eq 0 ]]; then
   echo -e "${GREEN}Môi trường Unity OK. Tiếp tục quy trình...${NC}"
 else
   echo -e "${RED}Kiểm tra môi trường Unity thất bại. Hãy cài đặt Unity phiên bản $UNITY_VERSION trước khi tiếp tục.${NC}"
+  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Unity Environment Check Failed" "Kiểm tra môi trường Unity thất bại. Hãy cài đặt Unity phiên bản $UNITY_VERSION"
   exit 1
 fi
 
@@ -119,6 +152,7 @@ elif [[ $flutter_check_status -eq 2 ]]; then
   echo -e "${YELLOW}Môi trường Flutter có cảnh báo nhưng có thể tiếp tục quy trình. Kiểm tra log để biết chi tiết.${NC}"
 else
   echo -e "${RED}Kiểm tra môi trường Flutter thất bại. Kiểm tra log để biết chi tiết.${NC}"
+  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Flutter Environment Check Failed" "Kiểm tra môi trường Flutter thất bại"
   exit 1
 fi
 
@@ -133,6 +167,7 @@ case $PLATFORM in
     # Kiểm tra macOS
     if [[ "$OSTYPE" != "darwin"* ]]; then
       echo -e "${RED}[LỖI] Không thể build cho iOS trên hệ điều hành không phải macOS.${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "iOS Build Environment Error" "Không thể build cho iOS trên hệ điều hành không phải macOS"
       exit 1
     fi
     ;;
@@ -155,6 +190,7 @@ if [[ $? -eq 0 ]]; then
   echo -e "${GREEN}Chuyển đổi Unity platform thành công.${NC}"
 else
   echo -e "${RED}Chuyển đổi Unity platform thất bại.${NC}"
+  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Unity Platform Switch Failed" "Chuyển đổi Unity platform thất bại"
   exit 1
 fi
 
@@ -165,8 +201,11 @@ echo -e "${YELLOW}Xuất Unity module cho Flutter platform $PLATFORM...${NC}"
 # Kiểm tra kết quả của việc xuất Unity module
 if [[ $? -eq 0 ]]; then
   echo -e "${GREEN}Xuất Unity module thành công.${NC}"
+  send_telegram_unity_export "success" "$PLATFORM" "$BUILD_TYPE" "$UNITY_BRANCH" "$UNITY_COMMIT"
 else
   echo -e "${RED}Xuất Unity module thất bại.${NC}"
+  send_telegram_unity_export "error" "$PLATFORM" "$BUILD_TYPE" "$UNITY_BRANCH" "$UNITY_COMMIT"
+  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Unity Export Failed" "Xuất Unity module thất bại"
   exit 1
 fi
 
@@ -184,8 +223,16 @@ case $PLATFORM in
       else
         echo -e "${GREEN}Build Android release APK và AAB thành công.${NC}"
       fi
+      
+      # Lấy thông tin version từ pubspec.yaml
+      VERSION_NAME=$(grep "version:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
+      VERSION_CODE=$(grep "version_code:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
+      
+      # Gửi thông báo hoàn thành
+      send_telegram_finish "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$FLUTTER_COMMIT_MSG" "$UNITY_BRANCH" "$UNITY_COMMIT" "$UNITY_COMMIT_MSG" "$VERSION_CODE" "$VERSION_NAME" "$ROOT_DIR/artifacts/android/$BUILD_TYPE/app.apk"
     else
       echo -e "${RED}[LỖI] Build Android thất bại.${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Android Build Failed" "Build Android thất bại"
       exit 1
     fi
     ;;
@@ -204,18 +251,40 @@ case $PLATFORM in
       # Chạy fastlane beta và lưu log
       echo -e "${YELLOW}Chạy fastlane beta...${NC}"
       echo -e "${YELLOW}Log sẽ được lưu tại: $FASTLANE_LOG${NC}"
-      fastlane beta 2>&1 | tee "$FASTLANE_LOG"
+      fastlane beta 2>&1 | tee -a "$FASTLANE_LOG"
+
+       # Lấy thông tin version trước khi build
+      echo -e "${YELLOW}Lấy thông tin version...${NC}"
+      version_info=$(fastlane get_version 2>&1 | tee -a "$FASTLANE_LOG")
+      version_code=$(echo "$version_info" | grep "Version Code:" | cut -d':' -f2 | tr -d ' ')
+      version_name=$(echo "$version_info" | grep "Version Name:" | cut -d':' -f2 | tr -d ' ')
       
       # Kiểm tra kết quả của fastlane
       if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
         echo -e "${GREEN}Build iOS và upload lên TestFlight thành công.${NC}"
+        
+        # Gửi thông báo hoàn thành với version từ Fastlane
+        send_telegram_finish \
+          "$PLATFORM" \
+          "$BUILD_TYPE" \
+          "$FLUTTER_BRANCH" \
+          "$FLUTTER_COMMIT" \
+          "$FLUTTER_COMMIT_MSG" \
+          "$UNITY_BRANCH" \
+          "$UNITY_COMMIT" \
+          "$UNITY_COMMIT_MSG" \
+          "$version_code" \
+          "$version_name" \
+          "https://testflight.apple.com"
       else
         echo -e "${RED}[LỖI] Build iOS hoặc upload lên TestFlight thất bại.${NC}"
         echo -e "${RED}Kiểm tra log tại: $FASTLANE_LOG${NC}"
+        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "iOS Build Failed" "Build iOS hoặc upload lên TestFlight thất bại"
         exit 1
       fi
     else
       echo -e "${RED}[LỖI] Không thể chuyển đến thư mục iOS.${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "iOS Directory Error" "Không thể chuyển đến thư mục iOS"
       exit 1
     fi
     ;;

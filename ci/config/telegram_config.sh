@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# Cấu hình Telegram
+export TELEGRAM_BOT_TOKEN="7623162897:AAHLtuVhQ7UC-JX1Nfq4LxFJAtvFzUdf5oM"
+export TELEGRAM_CHAT_ID="-4742835903" 
