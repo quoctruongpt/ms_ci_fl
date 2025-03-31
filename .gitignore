@@ -22,8 +22,6 @@ Thumbs.db
 /logs/*
 !/logs/.gitkeep
 !/ci/.gitkeep
-/tools/*
-!/tools/.gitkeep
 
 # Các thư mục và file tạm thời
 /tmp/
