@@ -190,8 +190,34 @@ case $PLATFORM in
     fi
     ;;
   ios)
-    # Build cho iOS (sẽ triển khai sau)
-    echo -e "${YELLOW}Build ứng dụng iOS chưa được triển khai.${NC}"
+    # Build cho iOS và chạy fastlane
+    echo -e "${YELLOW}Build ứng dụng iOS và chạy fastlane...${NC}"
+    cd "$ROOT_DIR/src/flutter_project/ios"
+    if [[ $? -eq 0 ]]; then
+      # Tạo thư mục logs nếu chưa tồn tại
+      mkdir -p "$ROOT_DIR/logs"
+      
+      # Tạo tên file log với timestamp
+      TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+      FASTLANE_LOG="$ROOT_DIR/logs/fastlane_${TIMESTAMP}.log"
+      
+      # Chạy fastlane beta và lưu log
+      echo -e "${YELLOW}Chạy fastlane beta...${NC}"
+      echo -e "${YELLOW}Log sẽ được lưu tại: $FASTLANE_LOG${NC}"
+      fastlane beta 2>&1 | tee "$FASTLANE_LOG"
+      
+      # Kiểm tra kết quả của fastlane
+      if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+        echo -e "${GREEN}Build iOS và upload lên TestFlight thành công.${NC}"
+      else
+        echo -e "${RED}[LỖI] Build iOS hoặc upload lên TestFlight thất bại.${NC}"
+        echo -e "${RED}Kiểm tra log tại: $FASTLANE_LOG${NC}"
+        exit 1
+      fi
+    else
+      echo -e "${RED}[LỖI] Không thể chuyển đến thư mục iOS.${NC}"
+      exit 1
+    fi
     ;;
 esac
 
