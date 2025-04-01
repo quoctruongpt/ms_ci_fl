@@ -220,9 +220,14 @@ case $PLATFORM in
     if [[ $? -eq 0 ]]; then
       APK_URL=$(echo "$BUILD_URLS" | grep -o 'https://[^ ]*')
         
-        # Lấy thông tin version từ pubspec.yaml
-        VERSION_NAME=$(grep "version:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
-        VERSION_CODE=$(grep "version_code:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
+        # Lấy thông tin version từ app/build.gradle
+        echo -e "${YELLOW}Lấy thông tin version từ app/build.gradle...${NC}"
+        
+        # Đọc versionName từ app/build.gradle
+        VERSION_NAME=$(grep -o "versionName\s*=\s*[0-9.]*" "$ROOT_DIR/src/flutter_project/android/app/build.gradle.kts" | grep -o "[0-9.]*")
+                
+        # Đọc versionCode từ app/build.gradle
+        VERSION_CODE=$(grep -o "versionCode\s*=\s*[0-9]*" "$ROOT_DIR/src/flutter_project/android/app/build.gradle.kts" | grep -o "[0-9]*")
         
         # Gửi thông báo hoàn thành
         send_telegram_finish "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$FLUTTER_COMMIT_MSG" "$UNITY_BRANCH" "$UNITY_COMMIT" "$UNITY_COMMIT_MSG" "$VERSION_CODE" "$VERSION_NAME" "$APK_URL"
