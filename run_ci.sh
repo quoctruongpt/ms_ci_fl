@@ -216,20 +216,16 @@ case $PLATFORM in
   android)
     # Build cho Android
     echo -e "${YELLOW}Build ứng dụng Android...${NC}"
-    "$ROOT_DIR/ci/scripts/flutter/build_android.sh" "$BUILD_TYPE"
+    BUILD_URLS=$("$ROOT_DIR/ci/scripts/flutter/build_android.sh" "$BUILD_TYPE")
     if [[ $? -eq 0 ]]; then
-      if [[ "$BUILD_TYPE" == "test" ]]; then
-        echo -e "${GREEN}Build Android test APK thành công.${NC}"
-      else
-        echo -e "${GREEN}Build Android release APK và AAB thành công.${NC}"
-      fi
-      
-      # Lấy thông tin version từ pubspec.yaml
-      VERSION_NAME=$(grep "version:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
-      VERSION_CODE=$(grep "version_code:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
-      
-      # Gửi thông báo hoàn thành
-      send_telegram_finish "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$FLUTTER_COMMIT_MSG" "$UNITY_BRANCH" "$UNITY_COMMIT" "$UNITY_COMMIT_MSG" "$VERSION_CODE" "$VERSION_NAME" "$ROOT_DIR/artifacts/android/$BUILD_TYPE/app.apk"
+      APK_URL=$(echo "$BUILD_URLS" | grep -o 'https://[^ ]*')
+        
+        # Lấy thông tin version từ pubspec.yaml
+        VERSION_NAME=$(grep "version:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
+        VERSION_CODE=$(grep "version_code:" "$ROOT_DIR/src/flutter_project/pubspec.yaml" | awk '{print $2}')
+        
+        # Gửi thông báo hoàn thành
+        send_telegram_finish "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$FLUTTER_COMMIT_MSG" "$UNITY_BRANCH" "$UNITY_COMMIT" "$UNITY_COMMIT_MSG" "$VERSION_CODE" "$VERSION_NAME" "$APK_URL"
     else
       echo -e "${RED}[LỖI] Build Android thất bại.${NC}"
       send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Android Build Failed" "Build Android thất bại"

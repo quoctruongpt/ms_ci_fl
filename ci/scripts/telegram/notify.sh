@@ -5,7 +5,6 @@ send_telegram_message() {
     local message="$1"
     # Chuyển đổi \n thành %0A cho URL encoding
     message=$(echo "$message" | sed 's/\\n/%0A/g')
-    
     local response=$(curl -s -X POST \
         "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
         -d "chat_id=${TELEGRAM_CHAT_ID}" \
@@ -24,6 +23,7 @@ send_telegram_message() {
         return 1
     fi
     
+    echo "Gửi thông báo thành công!"
     return 0
 }
 
@@ -111,10 +111,7 @@ send_telegram_finish() {
     local message="🎉 <b>Build Hoàn Tất</b>\n\n"
     message+="Platform: ${platform}\n"
     message+="Build Type: ${build_type}\n"
-    message+="Flutter Branch: ${flutter_branch} - ${flutter_commit} (${flutter_commit_msg})\n"
-    message+="Unity Branch: ${unity_branch} - ${unity_commit} (${unity_commit_msg})\n"
-    message+="Version Code: ${version_code}\n"
-    message+="Version Name: ${version_name}\n"
+    message+="Version: ${version_name} ${version_code}\n"
     if [ ! -z "$build_url" ]; then
         message+="Link tải: ${build_url}\n"
     fi

@@ -32,6 +32,54 @@ clean_flutter_project() {
   return 0
 }
 
+# Hàm upload build lên server
+upload_build() {
+  local file_path="$1"
+  local build_type="$2"
+  local platform="$3"
+  
+  echo -e "${YELLOW}Đang upload file build lên server...${NC}"
+  
+  # Kiểm tra file tồn tại
+  if [[ ! -f "$file_path" ]]; then
+    echo -e "${RED}[LỖI] Không tìm thấy file build tại: $file_path${NC}"
+    return 1
+  fi
+  
+  # Lấy tên file
+  local file_name=$(basename "$file_path")
+  
+  # Upload file lên Monkey Media
+  local response=$(curl -s -X POST \
+    --location 'https://media.monkeyuni.net/api/upload' \
+    --header 'token: a813ec766197294184a938c331b08e7e' \
+    --form "file=@\"$file_path\"" \
+    --form 'description=""' \
+    --form 'folder_path="CI_MS"' \
+    --form 'bucket="monkeymedia2020"')
+  
+  # Kiểm tra kết quả upload
+  if [[ $? -ne 0 ]]; then
+    echo -e "${RED}[LỖI] Upload file thất bại.${NC}"
+    return 1
+  fi
+  
+  # Parse response để lấy URL tải (response có dạng JSON với field link)
+  local download_url=$(echo "$response" | grep -o '"link":"[^"]*"' | cut -d'"' -f4 | sed 's/\\\//\//g')
+  
+  if [[ -z "$download_url" ]]; then
+    echo -e "${RED}[LỖI] Không thể lấy URL tải từ response.${NC}"
+    echo -e "${RED}Response: $response${NC}"
+    return 1
+  fi
+  
+  echo -e "${GREEN}[OK] Upload file thành công.${NC}"
+  
+  # Trả về URL tải mà không in ra console
+  echo "$download_url"
+  return 0
+}
+
 # Hàm build APK
 build_apk() {
   local build_mode="$1" # debug, profile hoặc release
@@ -51,13 +99,22 @@ build_apk() {
     return 1
   fi
   
-  # Sao chép APK vào thư mục artifacts
+  # Tạo timestamp
+  local timestamp=$(date +"%Y%m%d_%H%M%S")
+  
+  # Sao chép APK vào thư mục artifacts với tên mới
   local apk_path="${FLUTTER_PROJECT_DIR}/build/app/outputs/flutter-apk/app-${build_mode}.apk"
-  local target_path="${ARTIFACTS_DIR}/app-${build_mode}.apk"
+  local target_path="${ARTIFACTS_DIR}/app-${build_mode}_${timestamp}.apk"
   
   cp "$apk_path" "$target_path"
   
   echo -e "${GREEN}Đã build APK thành công: $target_path${NC}"
+  
+  # Upload file build và lấy URL
+  local download_url=$(upload_build "$target_path" "$build_mode" "android")
+  
+  # Trả về URL
+  echo "$download_url"
   return 0
 }
 
@@ -80,13 +137,22 @@ build_aab() {
     return 1
   fi
   
-  # Sao chép AAB vào thư mục artifacts
+  # Tạo timestamp
+  local timestamp=$(date +"%Y%m%d_%H%M%S")
+  
+  # Sao chép AAB vào thư mục artifacts với tên mới
   local aab_path="${FLUTTER_PROJECT_DIR}/build/app/outputs/bundle/${build_mode}/app-${build_mode}.aab"
-  local target_path="${ARTIFACTS_DIR}/app-${build_mode}.aab"
+  local target_path="${ARTIFACTS_DIR}/app-${build_mode}_${timestamp}.aab"
   
   cp "$aab_path" "$target_path"
   
   echo -e "${GREEN}Đã build App Bundle thành công: $target_path${NC}"
+  
+  # Upload file build và lấy URL
+  local download_url=$(upload_build "$target_path" "$build_mode" "android")
+  
+  # Trả về URL
+  echo "$download_url"
   return 0
 }
 
@@ -97,12 +163,15 @@ build_test() {
   # Clean dự án
   clean_flutter_project || return 1
   
-  # Build release APK
-  build_apk "release" || return 1
+  # Build release APK và lấy URL
+  local download_url=""
+  download_url=$(build_apk "release") || return 1
   
   echo -e "${GREEN}[OK] Build test thành công.${NC}"
   echo -e "${GREEN}[OK] APK được lưu tại: ${ARTIFACTS_DIR}/app-release.apk${NC}"
   
+  # Trả về URL
+  echo "$download_url"
   return 0
 }
 
@@ -113,16 +182,20 @@ build_release() {
   # Clean dự án
   clean_flutter_project || return 1
   
-  # Build release APK
-  build_apk "release" || return 1
+  # Build release APK và lấy URL
+  local apk_url=""
+  apk_url=$(build_apk "release") || return 1
   
-  # Build release AAB
-  build_aab "release" || return 1
+  # Build release AAB và lấy URL
+  local aab_url=""
+  aab_url=$(build_aab "release") || return 1
   
   echo -e "${GREEN}[OK] Build release thành công.${NC}"
   echo -e "${GREEN}[OK] APK được lưu tại: ${ARTIFACTS_DIR}/app-release.apk${NC}"
   echo -e "${GREEN}[OK] AAB được lưu tại: ${ARTIFACTS_DIR}/app-release.aab${NC}"
   
+  # Trả về cả 2 URL, phân cách bằng dấu |
+  echo "${apk_url} | ${aab_url}"
   return 0
 }
 
@@ -142,13 +215,16 @@ main() {
     return 1
   fi
   
-  # Thực hiện build theo tùy chọn
+  # Thực hiện build theo tùy chọn và lấy URL
+  local urls=""
   if [[ "$build_type" == "test" ]]; then
-    build_test || return 1
+    urls=$(build_test) || return 1
   else
-    build_release || return 1
+    urls=$(build_release) || return 1
   fi
   
+  # Trả về URL(s)
+  echo "$urls"
   return 0
 }
 
