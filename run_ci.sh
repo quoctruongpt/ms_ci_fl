@@ -256,9 +256,16 @@ case $PLATFORM in
 
        # Lấy thông tin version trước khi build
       echo -e "${YELLOW}Lấy thông tin version...${NC}"
-      version_info=$(fastlane get_version 2>&1 | tee -a "$FASTLANE_LOG")
-      version_code=$(echo "$version_info" | grep "Version Code:" | cut -d':' -f2 | tr -d ' ')
-      version_name=$(echo "$version_info" | grep "Version Name:" | cut -d':' -f2 | tr -d ' ')
+      version_info=$(fastlane get_version)
+       # Cách đúng để lấy version từ output của fastlane
+      if echo "$version_info" | grep -q "\[.*\]: Version Code:"; then
+        version_code=$(echo "$version_info" | grep "\[.*\]: Version Code:" | head -1 | sed 's/.*Version Code: //')
+        version_name=$(echo "$version_info" | grep "\[.*\]: Version Name:" | head -1 | sed 's/.*Version Name: //')
+      else
+        # Fallback nếu không tìm thấy theo định dạng trên
+        version_code=$(echo "$version_info" | grep "Version Code:" | head -1 | cut -d':' -f2 | tr -d ' ')
+        version_name=$(echo "$version_info" | grep "Version Name:" | head -1 | cut -d':' -f2 | tr -d ' ')
+      fi
       
       # Kiểm tra kết quả của fastlane
       if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
@@ -275,8 +282,7 @@ case $PLATFORM in
           "$UNITY_COMMIT" \
           "$UNITY_COMMIT_MSG" \
           "$version_code" \
-          "$version_name" \
-          "https://testflight.apple.com"
+          "$version_name"
       else
         echo -e "${RED}[LỖI] Build iOS hoặc upload lên TestFlight thất bại.${NC}"
         echo -e "${RED}Kiểm tra log tại: $FASTLANE_LOG${NC}"
