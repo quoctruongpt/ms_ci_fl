@@ -242,6 +242,7 @@ case $PLATFORM in
     echo -e "${YELLOW}Build ứng dụng iOS và chạy fastlane...${NC}"
     cd "$ROOT_DIR/src/flutter_project/ios"
     if [[ $? -eq 0 ]]; then
+      pod install
       # Tạo thư mục logs nếu chưa tồn tại
       mkdir -p "$ROOT_DIR/logs"
       
