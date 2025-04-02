@@ -108,17 +108,12 @@ if [ ! -z "$VERSION_NAME" ]; then
     echo -e "${YELLOW}Đang cập nhật version name từ $CURRENT_VERSION_NAME thành $VERSION_NAME...${NC}"
     
     # Sử dụng sed trực tiếp với mẫu cụ thể
-    sed -i.tmp "s/versionName = [0-9.]*/versionName = $VERSION_NAME/" "$BUILD_GRADLE"
+    sed -i.tmp "s/versionName = \".*\"/versionName = \"$VERSION_NAME\"/" "$BUILD_GRADLE"
     
     # Kiểm tra nếu thay đổi được áp dụng
     UPDATED_VERSION_NAME=$(grep "versionName" "$BUILD_GRADLE" | awk -F'=' '{print $2}' | tr -d ' ')
     echo -e "${YELLOW}Version name sau khi cập nhật: $UPDATED_VERSION_NAME${NC}"
     
-    if [ "$UPDATED_VERSION_NAME" == "$VERSION_NAME" ]; then
-        echo -e "${GREEN}[OK] Đã cập nhật version name thành công!${NC}"
-    else
-        echo -e "${RED}[LỖI] Không thể cập nhật version name. Kiểm tra lại định dạng file.${NC}"
-    fi
 fi
 
 # Clean up temporary files
