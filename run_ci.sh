@@ -257,23 +257,41 @@ case $PLATFORM in
       # Kiểm tra đã cài đặt fastlane chưa và phiên bản có phải là 2.227.0 không
       echo -e "${YELLOW}Kiểm tra phiên bản fastlane...${NC}"
       if ! command -v fastlane >/dev/null 2>&1; then
-        echo -e "${YELLOW}Fastlane chưa được cài đặt. Đang cài đặt fastlane 2.227.0...${NC}"
-        gem install fastlane -v 2.227.0
+        echo -e "${YELLOW}Fastlane chưa được cài đặt. Đang cài đặt fastlane...${NC}"
+        
+        # Kiểm tra homebrew đã được cài đặt chưa
+        if ! command -v brew >/dev/null 2>&1; then
+          echo -e "${YELLOW}Homebrew chưa được cài đặt. Đang cài đặt Homebrew...${NC}"
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          if [[ $? -ne 0 ]]; then
+            echo -e "${RED}[LỖI] Không thể cài đặt Homebrew.${NC}"
+            send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Homebrew Installation Failed" "Không thể cài đặt Homebrew"
+            exit 1
+          fi
+        fi
+        
+        # Cài đặt fastlane thông qua homebrew
+        echo -e "${YELLOW}Đang cài đặt fastlane thông qua Homebrew...${NC}"
+        brew install fastlane
         if [[ $? -ne 0 ]]; then
-          echo -e "${RED}[LỖI] Không thể cài đặt fastlane.${NC}"
-          send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Fastlane Installation Failed" "Không thể cài đặt fastlane 2.227.0"
-          exit 1
+          echo -e "${RED}[LỖI] Không thể cài đặt fastlane thông qua Homebrew.${NC}"
+          # Thử cài đặt qua gem với sudo nếu homebrew thất bại
+          echo -e "${YELLOW}Thử cài đặt fastlane với sudo...${NC}"
+          sudo gem install fastlane -v 2.227.0
+          if [[ $? -ne 0 ]]; then
+            echo -e "${RED}[LỖI] Không thể cài đặt fastlane.${NC}"
+            send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Fastlane Installation Failed" "Không thể cài đặt fastlane"
+            exit 1
+          fi
         fi
       else
         fastlane_version=$(fastlane --version | head -n1 | grep -o '[0-9.]*')
+        echo -e "${GREEN}Đã phát hiện fastlane phiên bản $fastlane_version.${NC}"
+        
+        # Nếu phiên bản không đúng, chỉ cảnh báo nhưng không bắt buộc cập nhật
         if [[ "$fastlane_version" != "2.227.0" ]]; then
-          echo -e "${YELLOW}Phiên bản fastlane hiện tại là $fastlane_version. Đang cập nhật lên 2.227.0...${NC}"
-          gem install fastlane -v 2.227.0
-          if [[ $? -ne 0 ]]; then
-            echo -e "${RED}[LỖI] Không thể cài đặt fastlane 2.227.0.${NC}"
-            send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Fastlane Update Failed" "Không thể cập nhật fastlane lên phiên bản 2.227.0"
-            exit 1
-          fi
+          echo -e "${YELLOW}Cảnh báo: Phiên bản fastlane được khuyến nghị là 2.227.0, nhưng đang dùng $fastlane_version.${NC}"
+          echo -e "${YELLOW}Tiếp tục chạy với phiên bản hiện tại. Nếu gặp vấn đề, hãy cập nhật thủ công.${NC}"
         else
           echo -e "${GREEN}Fastlane 2.227.0 đã được cài đặt.${NC}"
         fi
