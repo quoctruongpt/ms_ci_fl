@@ -256,35 +256,7 @@ case $PLATFORM in
       
       # Kiểm tra đã cài đặt fastlane chưa và phiên bản có phải là 2.227.0 không
       echo -e "${YELLOW}Kiểm tra phiên bản fastlane...${NC}"
-      if ! command -v fastlane >/dev/null 2>&1; then
-        echo -e "${YELLOW}Fastlane chưa được cài đặt. Đang cài đặt fastlane...${NC}"
-        
-        # Kiểm tra homebrew đã được cài đặt chưa
-        if ! command -v brew >/dev/null 2>&1; then
-          echo -e "${YELLOW}Homebrew chưa được cài đặt. Đang cài đặt Homebrew...${NC}"
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          if [[ $? -ne 0 ]]; then
-            echo -e "${RED}[LỖI] Không thể cài đặt Homebrew.${NC}"
-            send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Homebrew Installation Failed" "Không thể cài đặt Homebrew"
-            exit 1
-          fi
-        fi
-        
-        # Cài đặt fastlane thông qua homebrew
-        echo -e "${YELLOW}Đang cài đặt fastlane thông qua Homebrew...${NC}"
-        brew install fastlane
-        if [[ $? -ne 0 ]]; then
-          echo -e "${RED}[LỖI] Không thể cài đặt fastlane thông qua Homebrew.${NC}"
-          # Thử cài đặt qua gem với sudo nếu homebrew thất bại
-          echo -e "${YELLOW}Thử cài đặt fastlane với sudo...${NC}"
-          sudo gem install fastlane -v 2.227.0
-          if [[ $? -ne 0 ]]; then
-            echo -e "${RED}[LỖI] Không thể cài đặt fastlane.${NC}"
-            send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Fastlane Installation Failed" "Không thể cài đặt fastlane"
-            exit 1
-          fi
-        fi
-      else
+   
         fastlane_version=$(fastlane --version | head -n1 | grep -o '[0-9.]*')
         echo -e "${GREEN}Đã phát hiện fastlane phiên bản $fastlane_version.${NC}"
         
@@ -295,7 +267,7 @@ case $PLATFORM in
         else
           echo -e "${GREEN}Fastlane 2.227.0 đã được cài đặt.${NC}"
         fi
-      fi
+      
       
       fastlane beta 2>&1 | tee -a "$FASTLANE_LOG"
 
