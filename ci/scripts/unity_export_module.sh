@@ -136,6 +136,7 @@ export_unity_module() {
     -executeMethod "ExportModuleAutomation.ExportForPlatform" \
     -exportPath "$export_path" \
     -platform "$platform" \
+    -isProd false \
     -quit
 
   # Kiểm tra trạng thái thoát
