@@ -34,6 +34,10 @@ checkout_branch() {
   # Di chuyển đến thư mục dự án
   cd "$project_dir"
 
+  echo "Clean git"
+  git reset --hard
+  git clean -f -d
+
   # Fetch mới nhất từ origin
   echo -e "${YELLOW}Đang fetch từ remote...${NC}"
   git fetch origin
