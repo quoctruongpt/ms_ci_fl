@@ -32,18 +32,13 @@ send_telegram_start() {
     local platform="$1"
     local build_type="$2"
     local flutter_branch="$3"
-    local flutter_commit="$4"
-    local flutter_commit_msg="$5"
-    local unity_branch="$6"
-    local unity_commit="$7"
-    local unity_commit_msg="$8"
+    local unity_branch="$4"
     
     local message="🚀 <b>Bắt đầu Build</b>\n\n"
     message+="Platform: ${platform}\n"
     message+="Build Type: ${build_type}\n"
-    message+="Flutter Branch: ${flutter_branch} - ${flutter_commit} (${flutter_commit_msg})\n"
-    message+="Unity Branch: ${unity_branch} - ${unity_commit} (${unity_commit_msg})\n"
-    message+="Thời gian: $(date '+%Y-%m-%d %H:%M:%S')"
+    message+="Flutter Branch: ${flutter_branch}\n"
+    message+="Unity Branch: ${unity_branch}\n"
     
     send_telegram_message "$message"
 }

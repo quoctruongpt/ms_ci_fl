@@ -41,12 +41,6 @@ FLUTTER_BRANCH="main"
 UNITY_BRANCH="main"
 BUILD_TYPE="test"  # Mặc định là build test
 
-# Lấy commit hash và message của Flutter và Unity
-FLUTTER_COMMIT=$(cd "$ROOT_DIR/src/flutter_project" && git rev-parse --short HEAD)
-FLUTTER_COMMIT_MSG=$(cd "$ROOT_DIR/src/flutter_project" && git log -1 --pretty=%B)
-UNITY_COMMIT=$(cd "$ROOT_DIR/src/unity_project" && git rev-parse --short HEAD)
-UNITY_COMMIT_MSG=$(cd "$ROOT_DIR/src/unity_project" && git log -1 --pretty=%B)
-
 # Xử lý tham số
 show_help() {
   echo "Sử dụng: $0 [options]"
@@ -110,7 +104,7 @@ if [[ ! "$BUILD_TYPE" =~ ^(test|release)$ ]]; then
 fi
 
 # Gửi thông báo bắt đầu build
-send_telegram_start "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$FLUTTER_COMMIT_MSG" "$UNITY_BRANCH" "$UNITY_COMMIT" "$UNITY_COMMIT_MSG"
+send_telegram_start "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$UNITY_BRANCH"
 
 echo -e "${YELLOW}Bắt đầu quá trình CI cho platform: $PLATFORM${NC}"
 echo -e "${YELLOW}Flutter branch: $FLUTTER_BRANCH${NC}"
@@ -123,9 +117,33 @@ export ROOT_DIR
 "$ROOT_DIR/ci/scripts/git/checkout_branch.sh" "$FLUTTER_BRANCH" "$UNITY_BRANCH"
 if [[ $? -ne 0 ]]; then
   echo -e "${RED}[LỖI] Không thể chuyển đổi git branch. Hãy kiểm tra log để biết chi tiết.${NC}"
-  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Git Checkout Failed" "Không thể chuyển đổi git branch"
+  # Lấy commit ở đây không còn ý nghĩa vì checkout đã thất bại, gửi thông báo lỗi ngay
+  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "N/A" "$UNITY_BRANCH" "N/A" "Git Checkout Failed" "Không thể chuyển đổi git branch"
   exit 1
 fi
+
+# Lấy commit hash và message của Flutter và Unity SAU KHI checkout thành công
+echo -e "${YELLOW}Lấy thông tin commit sau khi checkout...${NC}"
+FLUTTER_COMMIT=$(cd "$ROOT_DIR/src/flutter_project" && git rev-parse --short HEAD)
+FLUTTER_COMMIT_MSG=$(cd "$ROOT_DIR/src/flutter_project" && git log -1 --pretty=%B)
+UNITY_COMMIT=$(cd "$ROOT_DIR/src/unity_project" && git rev-parse --short HEAD)
+UNITY_COMMIT_MSG=$(cd "$ROOT_DIR/src/unity_project" && git log -1 --pretty=%B)
+
+# Gửi thông báo sau khi checkout thành công
+CHECKOUT_MSG="✅ Checkout thành công!
+Platform: $PLATFORM
+Build Type: $BUILD_TYPE
+
+Flutter:
+- Branch: $FLUTTER_BRANCH
+- Commit: $FLUTTER_COMMIT
+- Message: $FLUTTER_COMMIT_MSG
+
+Unity:
+- Branch: $UNITY_BRANCH
+- Commit: $UNITY_COMMIT
+- Message: $UNITY_COMMIT_MSG"
+send_telegram_message "$CHECKOUT_MSG"
 
 # Kiểm tra môi trường Unity
 echo -e "${YELLOW}Kiểm tra môi trường Unity...${NC}"
@@ -224,7 +242,7 @@ case $PLATFORM in
         echo -e "${YELLOW}Lấy thông tin version từ app/build.gradle...${NC}"
         
         # Đọc versionName từ app/build.gradle
-        VERSION_NAME=$(grep -o "versionName\s*=\s*[0-9.]*" "$ROOT_DIR/src/flutter_project/android/app/build.gradle.kts" | grep -o "[0-9.]*")
+        VERSION_NAME=$(grep -o 'versionName\s*=\s*"[0-9.]*"' "$ROOT_DIR/src/flutter_project/android/app/build.gradle.kts" | sed 's/.*"\\(.*\\)".*/\\1/')
                 
         # Đọc versionCode từ app/build.gradle
         VERSION_CODE=$(grep -o "versionCode\s*=\s*[0-9]*" "$ROOT_DIR/src/flutter_project/android/app/build.gradle.kts" | grep -o "[0-9]*")
