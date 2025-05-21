@@ -258,75 +258,89 @@ case $PLATFORM in
   ios)
     # Build cho iOS và chạy fastlane
     echo -e "${YELLOW}Build ứng dụng iOS và chạy fastlane...${NC}"
+    
+    # Clean và get dependencies cho dự án Flutter
+    echo -e "${YELLOW}Clean và get dependencies cho dự án Flutter...${NC}"
+    cd "$ROOT_DIR/src/flutter_project" 
+    flutter clean
+    flutter pub get
+    if [[ $? -ne 0 ]]; then
+      echo -e "${RED}[LỖI] flutter clean hoặc flutter pub get thất bại.${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Flutter Clean/Get Failed (iOS)" "flutter clean hoặc flutter pub get thất bại cho iOS"
+      exit 1
+    fi
+    
     cd "$ROOT_DIR/src/flutter_project/ios"
-    if [[ $? -eq 0 ]]; then
-      pod install
-      # Tạo thư mục logs nếu chưa tồn tại
-      mkdir -p "$ROOT_DIR/logs"
-      
-      # Tạo tên file log với timestamp
-      TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
-      FASTLANE_LOG="$ROOT_DIR/logs/fastlane_${TIMESTAMP}.log"
-      
-      # Chạy fastlane beta và lưu log
-      echo -e "${YELLOW}Chạy fastlane beta...${NC}"
-      echo -e "${YELLOW}Log sẽ được lưu tại: $FASTLANE_LOG${NC}"
-      
-      # Kiểm tra đã cài đặt fastlane chưa và phiên bản có phải là 2.227.0 không
-      echo -e "${YELLOW}Kiểm tra phiên bản fastlane...${NC}"
+    if [[ $? -ne 0 ]]; then
+      echo -e "${RED}[LỖI] Không thể chuyển đến thư mục flutter_project/ios.${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "iOS Directory Error" "Không thể chuyển đến thư mục flutter_project/ios"
+      exit 1
+    fi
+    
+    echo -e "${YELLOW}Chạy pod install...${NC}"
+    pod install
+    
+    # Tạo thư mục logs nếu chưa tồn tại
+    mkdir -p "$ROOT_DIR/logs"
+    
+    # Tạo tên file log với timestamp
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    FASTLANE_LOG="$ROOT_DIR/logs/fastlane_${TIMESTAMP}.log"
+    
+    # Chạy fastlane beta và lưu log
+    echo -e "${YELLOW}Chạy fastlane beta...${NC}"
+    echo -e "${YELLOW}Log sẽ được lưu tại: $FASTLANE_LOG${NC}"
+    
+    # Kiểm tra đã cài đặt fastlane chưa và phiên bản có phải là 2.227.0 không
+    echo -e "${YELLOW}Kiểm tra phiên bản fastlane...${NC}"
    
-        fastlane_version=$(fastlane --version | head -n1 | grep -o '[0-9.]*')
-        echo -e "${GREEN}Đã phát hiện fastlane phiên bản $fastlane_version.${NC}"
-        
-        # Nếu phiên bản không đúng, chỉ cảnh báo nhưng không bắt buộc cập nhật
-        if [[ "$fastlane_version" != "2.227.0" ]]; then
-          echo -e "${YELLOW}Cảnh báo: Phiên bản fastlane được khuyến nghị là 2.227.0, nhưng đang dùng $fastlane_version.${NC}"
-          echo -e "${YELLOW}Tiếp tục chạy với phiên bản hiện tại. Nếu gặp vấn đề, hãy cập nhật thủ công.${NC}"
-        else
-          echo -e "${GREEN}Fastlane 2.227.0 đã được cài đặt.${NC}"
-        fi
+      fastlane_version=$(fastlane --version | head -n1 | grep -o '[0-9.]*')
+      echo -e "${GREEN}Đã phát hiện fastlane phiên bản $fastlane_version.${NC}"
       
-      
-      fastlane beta 2>&1 | tee -a "$FASTLANE_LOG"
+      # Nếu phiên bản không đúng, chỉ cảnh báo nhưng không bắt buộc cập nhật
+      if [[ "$fastlane_version" != "2.227.0" ]]; then
+        echo -e "${YELLOW}Cảnh báo: Phiên bản fastlane được khuyến nghị là 2.227.0, nhưng đang dùng $fastlane_version.${NC}"
+        echo -e "${YELLOW}Tiếp tục chạy với phiên bản hiện tại. Nếu gặp vấn đề, hãy cập nhật thủ công.${NC}"
+      else
+        echo -e "${GREEN}Fastlane 2.227.0 đã được cài đặt.${NC}"
+      fi
+    
+    
+    fastlane beta 2>&1 | tee -a "$FASTLANE_LOG"
 
-       # Lấy thông tin version trước khi build
-      echo -e "${YELLOW}Lấy thông tin version...${NC}"
-      version_info=$(fastlane get_version)
-       # Cách đúng để lấy version từ output của fastlane
-      if echo "$version_info" | grep -q "\[.*\]: Version Code:"; then
-        version_code=$(echo "$version_info" | grep "\[.*\]: Version Code:" | head -1 | sed 's/.*Version Code: //')
-        version_name=$(echo "$version_info" | grep "\[.*\]: Version Name:" | head -1 | sed 's/.*Version Name: //')
-      else
-        # Fallback nếu không tìm thấy theo định dạng trên
-        version_code=$(echo "$version_info" | grep "Version Code:" | head -1 | cut -d':' -f2 | tr -d ' ')
-        version_name=$(echo "$version_info" | grep "Version Name:" | head -1 | cut -d':' -f2 | tr -d ' ')
-      fi
-      
-      # Kiểm tra kết quả của fastlane
-      if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
-        echo -e "${GREEN}Build iOS và upload lên TestFlight thành công.${NC}"
-        
-        # Gửi thông báo hoàn thành với version từ Fastlane
-        send_telegram_finish \
-          "$PLATFORM" \
-          "$BUILD_TYPE" \
-          "$FLUTTER_BRANCH" \
-          "$FLUTTER_COMMIT" \
-          "$FLUTTER_COMMIT_MSG" \
-          "$UNITY_BRANCH" \
-          "$UNITY_COMMIT" \
-          "$UNITY_COMMIT_MSG" \
-          "$version_code" \
-          "$version_name"
-      else
-        echo -e "${RED}[LỖI] Build iOS hoặc upload lên TestFlight thất bại.${NC}"
-        echo -e "${RED}Kiểm tra log tại: $FASTLANE_LOG${NC}"
-        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "iOS Build Failed" "Build iOS hoặc upload lên TestFlight thất bại"
-        exit 1
-      fi
+     # Lấy thông tin version trước khi build
+    echo -e "${YELLOW}Lấy thông tin version...${NC}"
+    version_info=$(fastlane get_version)
+     # Cách đúng để lấy version từ output của fastlane
+    if echo "$version_info" | grep -q "\[.*\]: Version Code:"; then
+      version_code=$(echo "$version_info" | grep "\[.*\]: Version Code:" | head -1 | sed 's/.*Version Code: //')
+      version_name=$(echo "$version_info" | grep "\[.*\]: Version Name:" | head -1 | sed 's/.*Version Name: //')
     else
-      echo -e "${RED}[LỖI] Không thể chuyển đến thư mục iOS.${NC}"
-      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "iOS Directory Error" "Không thể chuyển đến thư mục iOS"
+      # Fallback nếu không tìm thấy theo định dạng trên
+      version_code=$(echo "$version_info" | grep "Version Code:" | head -1 | cut -d':' -f2 | tr -d ' ')
+      version_name=$(echo "$version_info" | grep "Version Name:" | head -1 | cut -d':' -f2 | tr -d ' ')
+    fi
+    
+    # Kiểm tra kết quả của fastlane
+    if [[ ${PIPESTATUS[0]} -eq 0 ]]; then
+      echo -e "${GREEN}Build iOS và upload lên TestFlight thành công.${NC}"
+      
+      # Gửi thông báo hoàn thành với version từ Fastlane
+      send_telegram_finish \
+        "$PLATFORM" \
+        "$BUILD_TYPE" \
+        "$FLUTTER_BRANCH" \
+        "$FLUTTER_COMMIT" \
+        "$FLUTTER_COMMIT_MSG" \
+        "$UNITY_BRANCH" \
+        "$UNITY_COMMIT" \
+        "$UNITY_COMMIT_MSG" \
+        "$version_code" \
+        "$version_name"
+    else
+      echo -e "${RED}[LỖI] Build iOS hoặc upload lên TestFlight thất bại.${NC}"
+      echo -e "${RED}Kiểm tra log tại: $FASTLANE_LOG${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "iOS Build Failed" "Build iOS hoặc upload lên TestFlight thất bại"
       exit 1
     fi
     ;;
