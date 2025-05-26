@@ -1,29 +1,27 @@
 #!/bin/bash
 
-# Hàm gửi thông báo
-send_telegram_message() {
+# Hàm gửi thông báo đến Google Chat
+send_google_chat_message() {
     local message="$1"
-    # Chuyển đổi \n thành %0A cho URL encoding
-    message=$(echo "$message" | sed 's/\\n/%0A/g')
-    local response=$(curl -s -X POST \
-        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        -d "chat_id=${TELEGRAM_CHAT_ID}" \
-        -d "text=${message}" \
-        -d "parse_mode=HTML")
+
+    local webhook_url="https://chat.googleapis.com/v1/spaces/AAQAjBi7qCY/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=0nUWD7NOCGq67ZDDXXa-Q0QvxImA_yw52UK7F73A8HQ"
+
+    # Gửi tin nhắn
+    local response=$(curl -s -w "%{http_code}" -o /tmp/chat_response.txt \
+        -X POST "$webhook_url" \
+        -H "Content-Type: application/json" \
+        -d "{\"text\": \"${message}\"}")
+
+    local body=$(cat /tmp/chat_response.txt)
     
-    # Kiểm tra lỗi
-    if [[ $? -ne 0 ]]; then
-        echo "Lỗi khi gửi thông báo Telegram: $response" >&2
+    # Kiểm tra mã phản hồi HTTP
+    if [[ "$response" -ne 200 ]]; then
+        echo "❌ Lỗi khi gửi đến Google Chat. Mã HTTP: $response"
+        echo "Phản hồi API: $body"
         return 1
     fi
-    
-    # Kiểm tra response từ API
-    if echo "$response" | grep -q '"ok":false'; then
-        echo "Lỗi API Telegram: $response" >&2
-        return 1
-    fi
-    
-    echo "Gửi thông báo thành công!"
+
+    echo "✅ Đã gửi thông báo thành công đến Google Chat!"
     return 0
 }
 
@@ -34,13 +32,13 @@ send_telegram_start() {
     local flutter_branch="$3"
     local unity_branch="$4"
     
-    local message="🚀 <b>Bắt đầu Build</b>\n\n"
-    message+="Platform: ${platform}\n"
-    message+="Build Type: ${build_type}\n"
-    message+="Flutter Branch: ${flutter_branch}\n"
-    message+="Unity Branch: ${unity_branch}\n"
-    
-    send_telegram_message "$message"
+    local message="🚀 *Bắt đầu Build*
+    ⤷ Platform: ${platform}
+    ⤷ Build Type: ${build_type}
+    ⤷ Flutter Branch: ${flutter_branch}
+    ⤷ Unity Branch: ${unity_branch}"
+
+    send_google_chat_message "$message"
 }
 
 # Hàm gửi thông báo Unity export
@@ -55,13 +53,16 @@ send_telegram_unity_export() {
     case "$status" in
         "success") emoji="✅";;
         "error") emoji="❌";;
+        *) emoji="ℹ️";;
     esac
     
-    local message="${emoji} <b>Unity Export ${platform}</b>\n"
-    message+="Trạng thái: ${status}\n"
-    message+="Thời gian: $(date '+%Y-%m-%d %H:%M:%S')"
-    
-    send_telegram_message "$message"
+    local message="${emoji} *Unity Export - ${platform}*
+    ⤷ Trạng thái: ${status}
+    ⤷ Build Type: ${build_type}
+    ⤷ Unity Branch: ${unity_branch}
+    ⤷ Commit: ${unity_commit}"
+
+    send_google_chat_message "$message"
 }
 
 # Hàm gửi thông báo lỗi
@@ -75,18 +76,15 @@ send_telegram_error() {
     local error_message="$7"
     local error_details="$8"
     
-    local message="❌ <b>Build Lỗi</b>\n\n"
-    message+="Platform: ${platform}\n"
-    message+="Build Type: ${build_type}\n"
-    message+="Flutter Branch: ${flutter_branch} - ${flutter_commit}\n"
-    message+="Unity Branch: ${unity_branch} - ${unity_commit}\n"
-    message+="Lỗi: ${error_message}\n"
-    if [ ! -z "$error_details" ]; then
-        message+="Chi tiết: ${error_details}\n"
-    fi
-    message+="Thời gian: $(date '+%Y-%m-%d %H:%M:%S')"
-    
-    send_telegram_message "$message"
+    local message="❌ *Build Lỗi*
+    ⤷ Platform: ${platform}
+    ⤷ Build Type: ${build_type}
+    ⤷ Flutter: ${flutter_branch} - ${flutter_commit}
+    ⤷ Unity: ${unity_branch} - ${unity_commit}
+    ⤷ Lỗi: ${error_message}
+    ⤷ Thời gian: $(date '+%Y-%m-%d %H:%M:%S')"
+
+    send_google_chat_message "$message"
 }
 
 # Hàm gửi thông báo kết thúc build
@@ -103,14 +101,16 @@ send_telegram_finish() {
     local version_name="${10}"
     local build_url="${11}"
     
-    local message="🎉 <b>Build Hoàn Tất</b>\n\n"
-    message+="Platform: ${platform}\n"
-    message+="Build Type: ${build_type}\n"
-    message+="Version: ${version_name} ${version_code}\n"
-    if [ ! -z "$build_url" ]; then
-        message+="Link tải: ${build_url}\n"
-    fi
-    message+="Thời gian: $(date '+%Y-%m-%d %H:%M:%S')"
-    
-    send_telegram_message "$message"
-} 
+    local message="🎉 *Build Hoàn Tất*
+    ⤷ Platform: ${platform}
+    ⤷ Build Type: ${build_type}
+    ⤷ Version: ${version_name} (${version_code})
+    ⤷ Flutter: ${flutter_branch} - ${flutter_commit}
+    ⤷ ${flutter_commit_msg}
+    ⤷ Unity: ${unity_branch} - ${unity_commit}
+    ⤷ ${unity_commit_msg}
+    ⤷ Thời gian: $(date '+%Y-%m-%d %H:%M:%S')
+    ⤷ Link tải: ${build_url}"
+
+    send_google_chat_message "$message"
+}

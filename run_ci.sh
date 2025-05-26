@@ -12,19 +12,21 @@ GREEN='🟢'
 YELLOW='🟡'
 NC='' # No Color
 
+echo "xin chào"
+
 # Source cấu hình Telegram
-if [ -f "$ROOT_DIR/ci/config/telegram_config.sh" ]; then
-    source "$ROOT_DIR/ci/config/telegram_config.sh"
+# if [ -f "$ROOT_DIR/ci/config/telegram_config.sh" ]; then
+#     source "$ROOT_DIR/ci/config/telegram_config.sh"
     
-    # Kiểm tra cấu hình Telegram
-    if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
-        echo -e "${RED}[LỖI] Thiếu cấu hình Telegram. Vui lòng kiểm tra file ci/config/telegram_config.sh${NC}"
-        exit 1
-    fi
-else
-    echo -e "${RED}[LỖI] Không tìm thấy file cấu hình Telegram: ci/config/telegram_config.sh${NC}"
-    exit 1
-fi
+#     # Kiểm tra cấu hình Telegram
+#     if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+#         echo -e "${RED}[LỖI] Thiếu cấu hình Telegram. Vui lòng kiểm tra file ci/config/telegram_config.sh${NC}"
+#         exit 1
+#     fi
+# else
+#     echo -e "${RED}[LỖI] Không tìm thấy file cấu hình Telegram: ci/config/telegram_config.sh${NC}"
+#     exit 1
+# fi
 
 # Source script thông báo Telegram
 if [ -f "$ROOT_DIR/ci/scripts/telegram/notify.sh" ]; then
@@ -130,20 +132,12 @@ UNITY_COMMIT=$(cd "$ROOT_DIR/src/unity_project" && git rev-parse --short HEAD)
 UNITY_COMMIT_MSG=$(cd "$ROOT_DIR/src/unity_project" && git log -1 --pretty=%B)
 
 # Gửi thông báo sau khi checkout thành công
-CHECKOUT_MSG="✅ Checkout thành công!
-Platform: $PLATFORM
-Build Type: $BUILD_TYPE
-
-Flutter:
-- Branch: $FLUTTER_BRANCH
-- Commit: $FLUTTER_COMMIT
-- Message: $FLUTTER_COMMIT_MSG
-
-Unity:
-- Branch: $UNITY_BRANCH
-- Commit: $UNITY_COMMIT
-- Message: $UNITY_COMMIT_MSG"
-send_telegram_message "$CHECKOUT_MSG"
+CHECKOUT_MSG="✅ *Checkout thành công!*
+    𝑭 Flutter: ${FLUTTER_BRANCH} - ${FLUTTER_COMMIT}
+    ⤷ ${FLUTTER_COMMIT_MSG}
+    𝓤 Unity: ${UNITY_BRANCH} - ${UNITY_COMMIT}
+    ⤷ ${UNITY_COMMIT_MSG}"
+send_google_chat_message "$CHECKOUT_MSG"
 
 # Kiểm tra môi trường Unity
 echo -e "${YELLOW}Kiểm tra môi trường Unity...${NC}"
