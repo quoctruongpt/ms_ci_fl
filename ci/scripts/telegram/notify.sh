@@ -2,7 +2,15 @@
 
 # Hàm gửi thông báo đến Google Chat
 send_google_chat_message() {
-    local message="$1"
+    local message_raw="$1"
+    # Escape special JSON characters in the message
+    # Replace " with \"
+    # Replace \ with \\ (to keep literal backslashes)
+    # Replace newline with \n
+    # Replace carriage return with \r
+    # Replace tab with \t
+    # Add other replacements as needed (e.g., for /, \b, \f)
+    local message_escaped=$(echo "$message_raw" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/\n/\\n/g' -e 's/\r/\\r/g' -e 's/\t/\\t/g')
 
     local webhook_url="https://chat.googleapis.com/v1/spaces/AAQAjBi7qCY/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=0nUWD7NOCGq67ZDDXXa-Q0QvxImA_yw52UK7F73A8HQ"
 
@@ -10,7 +18,7 @@ send_google_chat_message() {
     local response=$(curl -s -w "%{http_code}" -o /tmp/chat_response.txt \
         -X POST "$webhook_url" \
         -H "Content-Type: application/json" \
-        -d "{\"text\": \"${message}\"}")
+        -d "{\"text\": \"${message_escaped}\"}")
 
     local body=$(cat /tmp/chat_response.txt)
     
@@ -105,12 +113,12 @@ send_telegram_finish() {
     ⤷ Platform: ${platform}
     ⤷ Build Type: ${build_type}
     ⤷ Version: ${version_name} (${version_code})
-    ⤷ Flutter: ${flutter_branch} - ${flutter_commit}
-    ⤷ ${flutter_commit_msg}
-    ⤷ Unity: ${unity_branch} - ${unity_commit}
-    ⤷ ${unity_commit_msg}
+    ⤷ Flutter: ${flutter_branch} - ${flutter_commit} - ${flutter_commit_msg}
+    ⤷ Unity: ${unity_branch} - ${unity_commit} - ${unity_commit_msg}
     ⤷ Thời gian: $(date '+%Y-%m-%d %H:%M:%S')
     ⤷ Link tải: ${build_url}"
+
+    echo $message
 
     send_google_chat_message "$message"
 }
