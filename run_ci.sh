@@ -228,16 +228,28 @@ echo -e "${YELLOW}Tiến hành build Flutter cho $PLATFORM...${NC}"
 echo -e "${YELLOW}Kiểm tra file môi trường...${NC}"
 if [ ! -f "$ROOT_DIR/src/flutter_project/.env.dev" ] || [ ! -f "$ROOT_DIR/src/flutter_project/.env.prod" ]; then
     echo -e "${YELLOW}Sao chép file .env từ thư mục env...${NC}"
-    cp "$ROOT_DIR/env/.env.dev" "$ROOT_DIR/src/flutter_project/.env.dev" 2>/dev/null || {
+    
+    # Sao chép .env.dev với log lỗi chi tiết
+    if ! cp "$ROOT_DIR/env/.env.dev" "$ROOT_DIR/src/flutter_project/.env.dev" 2> /tmp/cp_error.log; then
+        error_msg=$(cat /tmp/cp_error.log)
         echo -e "${RED}[LỖI] Không thể sao chép file .env.dev${NC}"
-        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Environment Setup Failed" "Không thể sao chép file .env.dev"
+        echo -e "${RED}Chi tiết lỗi: $error_msg${NC}"
+        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Environment Setup Failed" "Không thể sao chép file .env.dev: $error_msg"
+        rm -f /tmp/cp_error.log
         exit 1
-    }
-    cp "$ROOT_DIR/env/.env.prod" "$ROOT_DIR/src/flutter_project/.env.prod" 2>/dev/null || {
+    fi
+    
+    # Sao chép .env.prod với log lỗi chi tiết
+    if ! cp "$ROOT_DIR/env/.env.prod" "$ROOT_DIR/src/flutter_project/.env.prod" 2> /tmp/cp_error.log; then
+        error_msg=$(cat /tmp/cp_error.log)
         echo -e "${RED}[LỖI] Không thể sao chép file .env.prod${NC}"
-        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Environment Setup Failed" "Không thể sao chép file .env.prod"
+        echo -e "${RED}Chi tiết lỗi: $error_msg${NC}"
+        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Environment Setup Failed" "Không thể sao chép file .env.prod: $error_msg"
+        rm -f /tmp/cp_error.log
         exit 1
-    }
+    fi
+    
+    rm -f /tmp/cp_error.log
     echo -e "${GREEN}Đã sao chép file .env thành công${NC}"
 else
     echo -e "${GREEN}Các file .env đã tồn tại${NC}"
