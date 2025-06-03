@@ -224,6 +224,25 @@ fi
 # Thực hiện build dự án Flutter cho từng nền tảng
 echo -e "${YELLOW}Tiến hành build Flutter cho $PLATFORM...${NC}"
 
+# Kiểm tra và sao chép file .env
+echo -e "${YELLOW}Kiểm tra file môi trường...${NC}"
+if [ ! -f "$ROOT_DIR/src/flutter_project/.env.dev" ] || [ ! -f "$ROOT_DIR/src/flutter_project/.env.prod" ]; then
+    echo -e "${YELLOW}Sao chép file .env từ thư mục env...${NC}"
+    cp "$ROOT_DIR/env/.env.dev" "$ROOT_DIR/src/flutter_project/.env.dev" 2>/dev/null || {
+        echo -e "${RED}[LỖI] Không thể sao chép file .env.dev${NC}"
+        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Environment Setup Failed" "Không thể sao chép file .env.dev"
+        exit 1
+    }
+    cp "$ROOT_DIR/env/.env.prod" "$ROOT_DIR/src/flutter_project/.env.prod" 2>/dev/null || {
+        echo -e "${RED}[LỖI] Không thể sao chép file .env.prod${NC}"
+        send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Environment Setup Failed" "Không thể sao chép file .env.prod"
+        exit 1
+    }
+    echo -e "${GREEN}Đã sao chép file .env thành công${NC}"
+else
+    echo -e "${GREEN}Các file .env đã tồn tại${NC}"
+fi
+
 case $PLATFORM in
   android)
     # Build cho Android

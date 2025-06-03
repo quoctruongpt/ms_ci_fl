@@ -98,3 +98,4 @@ DerivedData/
 
 # CocoaPods
 /ios/Pods/
+/env/
