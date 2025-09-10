@@ -295,6 +295,15 @@ case $PLATFORM in
       exit 1
     fi
     
+    # Precache Flutter engine cho iOS
+    echo -e "${YELLOW}Đang precache Flutter engine cho iOS...${NC}"
+    flutter precache --ios
+    if [[ $? -ne 0 ]]; then
+      echo -e "${RED}[LỖI] flutter precache --ios thất bại.${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Flutter Precache Failed (iOS)" "flutter precache --ios thất bại"
+      exit 1
+    fi
+    
     cd "$ROOT_DIR/src/flutter_project/ios"
     if [[ $? -ne 0 ]]; then
       echo -e "${RED}[LỖI] Không thể chuyển đến thư mục flutter_project/ios.${NC}"
