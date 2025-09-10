@@ -302,6 +302,11 @@ case $PLATFORM in
       exit 1
     fi
     
+    echo -e "${YELLOW}Đang dọn dẹp pod...${NC}"
+    pod cache clean --all
+    rm -rf Pods/
+    rm -f Podfile.lock
+    
     echo -e "${YELLOW}Chạy pod install...${NC}"
     pod install
     
