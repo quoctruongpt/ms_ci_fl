@@ -346,6 +346,14 @@ case $PLATFORM in
     
     
     fastlane beta 2>&1 | tee -a "$FASTLANE_LOG"
+    fastlane_status=${PIPESTATUS[0]}
+
+    if [[ $fastlane_status -eq 0 ]]; then
+      echo "✅ Build thành công"
+    else
+      echo "❌ Build thất bại"
+      exit 1
+    fi
 
      # Lấy thông tin version trước khi build
     echo -e "${YELLOW}Lấy thông tin version...${NC}"
