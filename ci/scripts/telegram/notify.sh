@@ -32,7 +32,7 @@ send_google_chat_message() {
     return 0
 }
 
-# (MỚI) Hàm gửi thông báo đến Telegram
+# (CẬP NHẬT) Hàm gửi thông báo đến Telegram
 send_telegram_message() {
     local message_raw="$1"
 
@@ -43,13 +43,11 @@ send_telegram_message() {
     # URL API của Telegram
     local webhook_url="https://api.telegram.org/bot${bot_token}/sendMessage"
 
-    # Tạo JSON payload
-    # Markdown được bật để giữ nguyên định dạng (*bold*, etc.)
+    # Tạo JSON payload - ĐÃ XÓA "parse_mode"
     local json_payload=$(cat <<EOF
 {
     "chat_id": "${chat_id}",
-    "text": "${message_raw}",
-    "parse_mode": "Markdown"
+    "text": "${message_raw}"
 }
 EOF
 )
