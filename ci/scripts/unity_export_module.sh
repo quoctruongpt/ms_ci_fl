@@ -158,7 +158,7 @@ export_unity_module() {
     # Sửa build.gradle
     fix_build_gradle "android"
   elif [[ "$platform" == "ios" ]]; then
-    local target_dir="${FLUTTER_PROJECT_DIR}/ios/UnityLibrary"
+    local target_dir="${FLUTTER_PROJECT_DIR}/ios/unityLibrary"
     rm -rf "$target_dir"
     mkdir -p "${FLUTTER_PROJECT_DIR}/ios"
     cp -R "$export_path" "$target_dir"
