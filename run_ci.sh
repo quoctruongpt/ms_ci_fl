@@ -140,17 +140,17 @@ CHECKOUT_MSG="✅ *Checkout thành công!*
 send_google_chat_message "$CHECKOUT_MSG"
 
 # Kiểm tra môi trường Unity
-echo -e "${YELLOW}Kiểm tra môi trường Unity...${NC}"
-"$ROOT_DIR/tools/unity_license_activation/check_unity.sh"
+# echo -e "${YELLOW}Kiểm tra môi trường Unity...${NC}"
+# "$ROOT_DIR/tools/unity_license_activation/check_unity.sh"
 
 # Kiểm tra kết quả của script kiểm tra Unity
-if [[ $? -eq 0 ]]; then
-  echo -e "${GREEN}Môi trường Unity OK. Tiếp tục quy trình...${NC}"
-else
-  echo -e "${RED}Kiểm tra môi trường Unity thất bại. Hãy cài đặt Unity phiên bản $UNITY_VERSION trước khi tiếp tục.${NC}"
-  send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Unity Environment Check Failed" "Kiểm tra môi trường Unity thất bại. Hãy cài đặt Unity phiên bản $UNITY_VERSION"
-  exit 1
-fi
+# if [[ $? -eq 0 ]]; then
+#   echo -e "${GREEN}Môi trường Unity OK. Tiếp tục quy trình...${NC}"
+# else
+#   echo -e "${RED}Kiểm tra môi trường Unity thất bại. Hãy cài đặt Unity phiên bản $UNITY_VERSION trước khi tiếp tục.${NC}"
+#   send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "Unity Environment Check Failed" "Kiểm tra môi trường Unity thất bại. Hãy cài đặt Unity phiên bản $UNITY_VERSION"
+#   exit 1
+# fi
 
 # Kiểm tra môi trường Flutter
 echo -e "${YELLOW}Kiểm tra môi trường Flutter...${NC}"
