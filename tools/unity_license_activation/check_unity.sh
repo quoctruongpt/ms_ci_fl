@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Script kiểm tra Unity version 2022.3.57f1
+# Script kiểm tra Unity version 2022.3.62f3
 # ===========================================
 
 # Xác định màu cho output
@@ -86,7 +86,7 @@ check_unity_license() {
 
 # Hàm chính
 main() {
-  local required_unity_version="2022.3.57f1"
+  local required_unity_version="2022.3.62f3"
   local os=$(check_os)
   
   echo "=== KIỂM TRA MÔI TRƯỜNG UNITY ==="

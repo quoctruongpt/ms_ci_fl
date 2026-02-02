@@ -38,7 +38,7 @@ fi
 
 # Mặc định là xây dựng cho Android và nhánh main cho cả Flutter và Unity
 PLATFORM="android"
-UNITY_VERSION="2022.3.57f1"
+UNITY_VERSION="2022.3.62f3"
 FLUTTER_BRANCH="main"
 UNITY_BRANCH="main"
 BUILD_TYPE="test"  # Mặc định là build test
@@ -48,7 +48,7 @@ show_help() {
   echo "Sử dụng: $0 [options]"
   echo "Options:"
   echo "  -p, --platform <platform>     Chọn nền tảng để build (android hoặc ios). Mặc định: android"
-  echo "  -u, --unity <version>         Chỉ định phiên bản Unity. Mặc định: 2022.3.57f1"
+  echo "  -u, --unity <version>         Chỉ định phiên bản Unity. Mặc định: 2022.3.62f3"
   echo "  -f, --flutter-branch <branch> Chỉ định git branch cho dự án Flutter. Mặc định: main"
   echo "  -t, --unity-branch <branch>   Chỉ định git branch cho dự án Unity. Mặc định: main"
   echo "  -b, --build-type <type>       Chỉ định loại build (test hoặc release). Mặc định: test"
@@ -311,13 +311,22 @@ case $PLATFORM in
       exit 1
     fi
     
-    echo -e "${YELLOW}Đang dọn dẹp pod...${NC}"
-    pod cache clean --all
-    rm -rf Pods/
-    rm -f Podfile.lock
+    # Dọn dẹp và cài đặt lại CocoaPods dependencies để tránh xung đột
+    echo -e "${YELLOW}Đang dọn dẹp CocoaPods dependencies...${NC}"
+    rm -rf Pods Podfile.lock
     
+    # Cập nhật CocoaPods repo để đảm bảo có phiên bản mới nhất
+    echo -e "${YELLOW}Đang cập nhật CocoaPods repo...${NC}"
+    pod repo update
+    
+    # Cài đặt lại dependencies
     echo -e "${YELLOW}Chạy pod install...${NC}"
     pod install
+    if [[ $? -ne 0 ]]; then
+      echo -e "${RED}[LỖI] pod install thất bại. Kiểm tra xung đột dependencies.${NC}"
+      send_telegram_error "$PLATFORM" "$BUILD_TYPE" "$FLUTTER_BRANCH" "$FLUTTER_COMMIT" "$UNITY_BRANCH" "$UNITY_COMMIT" "CocoaPods Install Failed" "pod install thất bại. Kiểm tra xung đột dependencies"
+      exit 1
+    fi
     
     # Tạo thư mục logs nếu chưa tồn tại
     mkdir -p "$ROOT_DIR/logs"

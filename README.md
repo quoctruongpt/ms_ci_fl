@@ -65,7 +65,7 @@ Pipeline tích hợp và triển khai tự động cho ứng dụng Flutter có 
 | -b, --build-type     | Loại build (test/release)       | test             |
 | -f, --flutter-branch | Branch của dự án Flutter        | main             |
 | -t, --unity-branch   | Branch của dự án Unity          | main             |
-| -u, --unity          | Phiên bản Unity                 | 2022.3.57f1      |
+| -u, --unity          | Phiên bản Unity                 | 2022.3.62f3      |
 | -h, --help           | Hiển thị trợ giúp               | -                |
 
 ### 3. Các script riêng biệt

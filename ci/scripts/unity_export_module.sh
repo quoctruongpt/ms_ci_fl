@@ -173,7 +173,7 @@ export_unity_module() {
 # Hàm chính
 main() {
   local platform=$1
-  local unity_version=${2:-"2022.3.57f1"}
+  local unity_version=${2:-"2022.3.62f3"}
 
   echo "=== XUẤT UNITY MODULE CHO FLUTTER ==="
   echo "Platform đích: $platform"
@@ -206,7 +206,7 @@ main() {
 if [[ $# -lt 1 ]]; then
   echo "Sử dụng: $0 <platform> [unity_version]"
   echo "  <platform>      Platform đích (android hoặc ios)"
-  echo "  [unity_version] Phiên bản Unity (mặc định: 2022.3.57f1)"
+  echo "  [unity_version] Phiên bản Unity (mặc định: 2022.3.62f3)"
   exit 1
 fi
 
