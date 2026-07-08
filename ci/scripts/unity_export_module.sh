@@ -96,6 +96,100 @@ fix_build_gradle() {
   return 0
 }
 
+require_file() {
+  local file_path="$1"
+  local description="$2"
+
+  if [[ ! -f "$file_path" ]]; then
+    echo -e "${RED}[LỖI] Không tìm thấy ${description}: $file_path${NC}"
+    return 1
+  fi
+
+  return 0
+}
+
+remove_ios_unity_framework_reference() {
+  local pbxproj="$1"
+
+  sed -i.tmp '/Pods_UnityFramework\.framework/d' "$pbxproj"
+  rm -f "${pbxproj}.tmp"
+  if grep -q 'Pods_UnityFramework.framework' "$pbxproj"; then
+    echo -e "${RED}[LỖI] Vẫn còn reference Pods_UnityFramework.framework trong project.pbxproj.${NC}"
+    return 1
+  fi
+
+  return 0
+}
+
+fix_ios_unity_datadog() {
+  local unity_library_dir="${FLUTTER_PROJECT_DIR}/ios/unityLibrary"
+  local podfile="${unity_library_dir}/Podfile"
+  local datadog_bridge="${unity_library_dir}/Libraries/com.datadoghq.unity/Plugins/iOS/Datadog_Bridge.swift"
+  local pbxproj="${unity_library_dir}/Unity-iPhone.xcodeproj/project.pbxproj"
+
+  echo -e "${YELLOW}Áp dụng fix Datadog cho Unity iOS...${NC}"
+
+  require_file "$podfile" "Unity iOS Podfile" || return 1
+  require_file "$datadog_bridge" "Datadog_Bridge.swift" || return 1
+  require_file "$pbxproj" "Unity-iPhone project.pbxproj" || return 1
+
+  ruby - "$podfile" <<'RUBY'
+podfile_path = ARGV.fetch(0)
+contents = File.read(podfile_path)
+pods = %w[DatadogCore DatadogCrashReporting DatadogLogs DatadogRUM]
+
+pods.each do |pod_name|
+  pod_line = "  pod '#{pod_name}', '3.8.3'"
+  if contents.match?(/^\s*pod\s+['"]#{Regexp.escape(pod_name)}['"]/)
+    contents.gsub!(/^\s*pod\s+['"]#{Regexp.escape(pod_name)}['"]\s*,\s*['"][^'"]+['"].*$/, pod_line)
+  else
+    contents.sub!(/(target\s+['"]UnityFramework['"]\s+do\s*\n)/, "\\1#{pod_line}\n")
+  end
+end
+
+File.write(podfile_path, contents)
+RUBY
+  if [[ $? -ne 0 ]]; then
+    echo -e "${RED}[LỖI] Không thể pin Datadog pods về 3.8.3 trong Podfile.${NC}"
+    return 1
+  fi
+  for datadog_pod in DatadogCore DatadogCrashReporting DatadogLogs DatadogRUM; do
+    if ! grep -q "pod '${datadog_pod}', '3.8.3'" "$podfile"; then
+      echo -e "${RED}[LỖI] Không xác nhận được ${datadog_pod} 3.8.3 trong Podfile.${NC}"
+      return 1
+    fi
+  done
+
+  perl -0pi -e 's/^\s*Datadog\.setUserInfo\(.*\)\s*$/    Datadog.setUserInfo(id: idString ?? "", name: nameString, email: emailString, extraInfo: decodedExtraInfo)/m' "$datadog_bridge"
+  if [[ $? -ne 0 ]] || ! grep -q 'Datadog.setUserInfo(id: idString ?? "", name: nameString, email: emailString, extraInfo: decodedExtraInfo)' "$datadog_bridge"; then
+    echo -e "${RED}[LỖI] Không thể patch Datadog_Bridge.swift setUserInfo.${NC}"
+    return 1
+  fi
+
+  echo -e "${YELLOW}Chạy pod install cho Unity iOS pods...${NC}"
+  (cd "$unity_library_dir" && pod install)
+  if [[ $? -ne 0 ]]; then
+    echo -e "${RED}[LỖI] pod install thất bại trong ${unity_library_dir}.${NC}"
+    return 1
+  fi
+
+  remove_ios_unity_framework_reference "$pbxproj" || return 1
+
+  if [[ ! -f "${unity_library_dir}/Podfile.lock" ]] || ! grep -q 'KSCrash.*2.5.0' "${unity_library_dir}/Podfile.lock"; then
+    echo -e "${RED}[LỖI] Không xác nhận được KSCrash 2.5.0 trong Unity Podfile.lock.${NC}"
+    return 1
+  fi
+  for datadog_pod in DatadogCore DatadogCrashReporting DatadogLogs DatadogRUM; do
+    if ! grep -q "${datadog_pod}.*3.8.3" "${unity_library_dir}/Podfile.lock"; then
+      echo -e "${RED}[LỖI] Không xác nhận được ${datadog_pod} 3.8.3 trong Unity Podfile.lock.${NC}"
+      return 1
+    fi
+  done
+
+  echo -e "${GREEN}[OK] Đã áp dụng fix Datadog Unity iOS và cài Unity Pods.${NC}"
+  return 0
+}
+
 # Xuất Unity module
 export_unity_module() {
   local platform="$1"
@@ -163,6 +257,11 @@ export_unity_module() {
     mkdir -p "${FLUTTER_PROJECT_DIR}/ios"
     cp -R "$export_path" "$target_dir"
     echo -e "${GREEN}[OK] Đã sao chép Unity module vào ${target_dir}${NC}"
+
+    fix_ios_unity_datadog
+    if [[ $? -ne 0 ]]; then
+      return 1
+    fi
   fi
 
   echo -e "${GREEN}[OK] Đã xuất Unity module cho $platform${NC}"
